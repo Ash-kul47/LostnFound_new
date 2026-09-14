@@ -1,0 +1,90 @@
+require("dotenv").config();
+const bcrypt = require("bcryptjs");
+
+const express=require("express");
+const connectDB=require('./config/db');
+
+const userRoutes=require("./routes/userRoutes");
+const helmet = require("helmet");
+
+const app=express();
+connectDB();
+app.set("view engine","ejs");
+app.use(helmet());
+const session = require("express-session");
+const passport = require("./config/passport");
+const authRoutes =require("./routes/authRoutes");
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const rateLimit = require("express-rate-limit");
+const limiter = rateLimit({
+
+    windowMs: 15 * 60 * 1000,
+
+    max: 100,
+
+    message: {
+        message: "Too many requests. Please try again later."
+    }
+
+});
+app.use(limiter);
+
+const cors = require("cors");
+app.use(cors());
+
+const mongoSanitize = require("express-mongo-sanitize");
+app.use(mongoSanitize());
+
+const xss = require("xss-clean");
+app.use(xss());
+
+
+
+
+app.use(
+    session({
+        secret: process.env.JWT_SECRET,
+        resave: false,
+        saveUninitialized: false
+    })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+
+app.use("/auth", authRoutes);
+
+app.get("/",(req,res)=>{
+    res.send("Lost & Found API Running");
+})
+
+
+app.get("/register-page",(req,res)=>{
+    res.render("register");
+});
+
+
+
+app.use("/api/users", userRoutes);
+
+const itemRoutes =require("./routes/itemRoutes");
+app.use("/api/items",itemRoutes);
+
+
+const claimRoutes =require("./routes/claimRoutes");
+app.use("/api/claims", claimRoutes);
+
+const notificationRoutes = require("./routes/notificationRoutes");
+app.use("/api/notifications",notificationRoutes);
+
+
+const dashboardRoutes = require("./routes/dashboardRoutes");
+app.use("/api/dashboard", dashboardRoutes);
+
+app.listen(3000,()=>{
+    console.log("Server running on port 3000")
+})
